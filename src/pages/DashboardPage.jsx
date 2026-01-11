@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from "react";
 import MainLayout from "../layouts/MainLayout";
 import Header from "../components/fragments/Header";
-import { supabase } from "../lib/supabaseClient"; // Import Supabase
+import { supabase } from "../lib/supabaseClient";
 import {
   Package,
   Layers,
   ClipboardList,
   TrendingUp,
   Loader2,
-} from "lucide-react";
+  Download,
+} from "lucide-react"; // Tambah icon Download
 
 const DashboardPage = () => {
   const [stats, setStats] = useState({
@@ -23,32 +24,27 @@ const DashboardPage = () => {
   const fetchDashboardData = async () => {
     setIsLoading(true);
     try {
-      // 1. Ambil Semua Produk (Untuk hitung total jenis & total stok)
       const { data: products, error: prodError } = await supabase
         .from("products")
         .select("stock, name, category, image_url, created_at")
-        .order("created_at", { ascending: false }); // Urutkan terbaru
+        .order("created_at", { ascending: false });
 
       if (prodError) throw prodError;
 
-      // 2. Ambil Jumlah Transaksi (Hanya butuh jumlahnya/count)
       const { count: transCount, error: transError } = await supabase
         .from("transactions")
         .select("*", { count: "exact", head: true });
 
       if (transError) throw transError;
 
-      // 3. Hitung Manual Total Stok (Looping jumlahan)
       const totalStockSum = products.reduce((acc, curr) => acc + curr.stock, 0);
 
-      // 4. Update State
       setStats({
         totalItems: products.length,
         totalStock: totalStockSum,
         totalHistory: transCount || 0,
       });
 
-      // Ambil 5 barang paling baru untuk tabel preview
       setRecentItems(products.slice(0, 5));
     } catch (error) {
       console.error("Error dashboard:", error.message);
@@ -61,7 +57,66 @@ const DashboardPage = () => {
     fetchDashboardData();
   }, []);
 
-  // Format Tanggal
+  // --- FITUR BARU: EXPORT STOK (Laporan Aset) ---
+  const handleExportStok = async () => {
+    try {
+      // 1. Ambil SEMUA data barang
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("name", { ascending: true }); // Urutkan abjad biar rapi
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        alert("Tidak ada data barang untuk diexport.");
+        return;
+      }
+
+      // 2. Buat Header CSV
+      const csvRows = [];
+      csvRows.push(
+        [
+          "No",
+          "Nama Barang",
+          "Kategori",
+          "Stok Saat Ini",
+          "Tanggal Masuk",
+        ].join(",")
+      );
+
+      // 3. Isi Baris Data
+      data.forEach((item, index) => {
+        const date = new Date(item.created_at).toLocaleDateString("id-ID");
+        csvRows.push(
+          [
+            index + 1,
+            `"${item.name}"`, // Pakai kutip biar aman kalau ada koma di nama
+            `"${item.category}"`,
+            item.stock,
+            `"${date}"`,
+          ].join(",")
+        );
+      });
+
+      // 4. Download File
+      const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute(
+        "download",
+        `Laporan_Stok_Gudang_${new Date().toISOString().split("T")[0]}.csv`
+      );
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Export error:", error.message);
+      alert("Gagal download laporan stok.");
+    }
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("id-ID", {
       day: "numeric",
@@ -76,7 +131,7 @@ const DashboardPage = () => {
 
       {/* --- KARTU STATISTIK --- */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {/* Card 1: Total Jenis Barang */}
+        {/* Card 1 */}
         <div className="bg-blue-600 rounded-3xl p-6 text-white relative overflow-hidden shadow-lg shadow-blue-200">
           <div className="relative z-10">
             <div className="p-3 bg-white/20 w-fit rounded-xl mb-4 backdrop-blur-sm">
@@ -89,14 +144,12 @@ const DashboardPage = () => {
               {isLoading ? "..." : stats.totalItems}
             </h3>
           </div>
-          {/* Hiasan Background */}
           <Package
             className="absolute -right-4 -bottom-4 text-white/10"
             size={120}
           />
         </div>
-
-        {/* Card 2: Total Stok Fisik */}
+        {/* Card 2 */}
         <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm relative overflow-hidden">
           <div className="relative z-10">
             <div className="p-3 bg-orange-50 w-fit rounded-xl mb-4">
@@ -111,8 +164,7 @@ const DashboardPage = () => {
             </h3>
           </div>
         </div>
-
-        {/* Card 3: Total Riwayat Transaksi */}
+        {/* Card 3 */}
         <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm relative overflow-hidden">
           <div className="relative z-10">
             <div className="p-3 bg-purple-50 w-fit rounded-xl mb-4">
@@ -129,21 +181,17 @@ const DashboardPage = () => {
         </div>
       </div>
 
-      {/* --- KONTEN BAWAH (TABEL SUMMARY) --- */}
+      {/* --- KONTEN BAWAH --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Bagian Kiri: Tabel Barang Terbaru (Lebar 2 kolom) */}
+        {/* Tabel Barang Terbaru */}
         <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-gray-800">
               Barang Baru Masuk
             </h3>
-            <button className="text-sm text-primary hover:underline font-medium">
-              Lihat Semua
-            </button>
           </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
                 <tr className="border-b border-gray-100 text-gray-400 text-xs uppercase tracking-wider">
                   <th className="py-3 font-medium">Barang</th>
@@ -204,8 +252,8 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Bagian Kanan: Quick Action / Summary Kecil (Lebar 1 kolom) */}
-        <div className="bg-primary/5 rounded-3xl p-6 border border-primary/10 flex flex-col justify-center items-center text-center">
+        {/* --- Quick Action (UPDATE BUTTON) --- */}
+        <div className="bg-primary/5 rounded-3xl p-6 border border-primary/10 flex flex-col justify-center items-center text-center bg-white">
           <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
             <TrendingUp className="text-primary" size={32} />
           </div>
@@ -213,11 +261,17 @@ const DashboardPage = () => {
             Performa Gudang
           </h3>
           <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-            Semua data stok terupdate secara realtime. Cek riwayat untuk detail
-            mutasi.
+            Unduh laporan lengkap stok saat ini untuk keperluan audit atau
+            rekapitulasi bulanan.
           </p>
-          <button className="w-full py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark transition shadow-lg shadow-blue-200">
-            Unduh Laporan PDF
+
+          {/* TOMBOL YANG SUDAH DIUPDATE */}
+          <button
+            onClick={handleExportStok}
+            className="w-full py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark transition shadow-lg shadow-blue-200 flex items-center justify-center gap-2"
+          >
+            <Download size={18} />
+            Export Laporan Stok
           </button>
         </div>
       </div>

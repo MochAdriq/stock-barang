@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "../lib/supabaseClient"; // 1. Import Supabase
+import { supabase } from "../lib/supabaseClient";
 import MainLayout from "../layouts/MainLayout";
 import Header from "../components/fragments/Header";
 import Button from "../components/ui/Button";
@@ -24,27 +24,52 @@ const BarangPage = () => {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  // State Data Selection
   const [itemToEdit, setItemToEdit] = useState(null);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [itemToDetail, setItemToDetail] = useState(null);
 
-  // 2. STATE DATA ASLI (Ganti dummyBarang)
+  // State Data & Pagination & Search
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 3. FUNGSI FETCH DATA DARI SUPABASE
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Debounce Search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setCurrentPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // FUNGSI FETCH DATA
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
-      // Ambil data dari tabel 'products', urutkan dari yang terbaru
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
 
+      let query = supabase
+        .from("products")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      // FILTER SEARCH
+      if (debouncedSearch) {
+        query = query.ilike("name", `%${debouncedSearch}%`);
+      }
+
+      const { data, error, count } = await query;
       if (error) throw error;
+
       setProducts(data);
+      setTotalItems(count || 0);
     } catch (error) {
       console.error("Error fetching products:", error.message);
       alert("Gagal mengambil data barang!");
@@ -53,20 +78,22 @@ const BarangPage = () => {
     }
   };
 
-  // Panggil fetchProducts saat halaman pertama kali dibuka
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [currentPage, itemsPerPage, debouncedSearch]);
 
   // --- Handlers ---
   const handleOpenAdd = () => {
     setItemToEdit(null);
     setIsModalOpen(true);
   };
-
   const handleOpenEdit = (item) => {
     setItemToEdit(item);
     setIsModalOpen(true);
+  };
+  const handleOpenDetail = (item) => {
+    setItemToDetail(item);
+    setIsDetailOpen(true);
   };
 
   const handleOpenDelete = (item) => {
@@ -76,29 +103,28 @@ const BarangPage = () => {
 
   const handleConfirmDelete = async () => {
     if (!itemToDelete) return;
-
     try {
-      // 1. (BARU) Catat dulu ke Riwayat sebelum dihapus
-      // Kita pakai nama dari itemToDelete karena setelah ini ID-nya akan invalid
+      // Catat ke riwayat
       await supabase.from("transactions").insert([
         {
-          product_id: null, // ID null karena barangnya mau dihapus
-          product_name_cached: itemToDelete.name, // PENTING: Nama disimpan di sini
+          product_id: null,
+          product_name_cached: itemToDelete.name,
+          category_cached: itemToDelete.category,
+          image_url_cached: itemToDelete.image_url,
           type: "DELETE",
-          quantity: itemToDelete.stock, // Catat stok terakhir saat dihapus
+          quantity: itemToDelete.stock,
           date: new Date(),
           status: "Barang Dihapus",
         },
       ]);
 
-      // 2. Hapus data dari tabel 'products'
       const { error } = await supabase
         .from("products")
         .delete()
         .eq("id", itemToDelete.id);
-
       if (error) throw error;
 
+      setCurrentPage(1);
       fetchProducts();
       setIsDeleteOpen(false);
       setItemToDelete(null);
@@ -109,16 +135,14 @@ const BarangPage = () => {
     }
   };
 
-  const handleOpenDetail = (item) => {
-    setItemToDetail(item);
-    setIsDetailOpen(true);
-  };
-
-  // Helper: Format Tanggal (dari 2025-12-20T... jadi 20 Desember 2025)
   const formatDate = (dateString) => {
     const options = { day: "numeric", month: "long", year: "numeric" };
     return new Date(dateString).toLocaleDateString("id-ID", options);
   };
+
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startEntry = (currentPage - 1) * itemsPerPage + 1;
+  const endEntry = Math.min(currentPage * itemsPerPage, totalItems);
 
   return (
     <MainLayout>
@@ -129,24 +153,24 @@ const BarangPage = () => {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           editData={itemToEdit}
-          onSuccess={fetchProducts}
+          onSuccess={() => {
+            setCurrentPage(1);
+            fetchProducts();
+          }}
         />
       )}
-
       <DeleteAlert
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
         onConfirm={handleConfirmDelete}
         itemName={itemToDelete?.name || "Item ini"}
       />
-
       <DetailModal
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
         item={itemToDetail}
       />
 
-      {/* Card Utama */}
       <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm min-h-[500px]">
         {/* Toolbar */}
         <div className="flex flex-col md:flex-row justify-between gap-4 mb-8">
@@ -155,10 +179,13 @@ const BarangPage = () => {
               className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
               size={20}
             />
+            {/* Input Search Aktif */}
             <input
               type="text"
-              placeholder="Cari Barang"
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="Cari Barang..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
             />
           </div>
 
@@ -170,16 +197,16 @@ const BarangPage = () => {
               <Plus size={18} />
               <span>Tambah Barang</span>
             </Button>
-            <button className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 font-medium transition">
+            {/* <button className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 font-medium transition">
               <SlidersHorizontal size={18} />
               <span>Filter</span>
-            </button>
+            </button> */}
           </div>
         </div>
 
-        {/* TABEL DATA */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        {/* Tabel */}
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left border-collapse min-w-[600px]">
             <thead>
               <tr className="border-b border-gray-100 text-gray-500 text-sm">
                 <th className="py-4 px-4 w-10">
@@ -198,9 +225,7 @@ const BarangPage = () => {
                 <th className="py-4 px-4 font-medium text-center">Action</th>
               </tr>
             </thead>
-
             <tbody className="divide-y divide-gray-100">
-              {/* 4. LOADING STATE */}
               {isLoading ? (
                 <tr>
                   <td colSpan="7" className="py-10 text-center text-gray-500">
@@ -214,14 +239,14 @@ const BarangPage = () => {
                   </td>
                 </tr>
               ) : products.length === 0 ? (
-                /* 5. EMPTY STATE (Jika data kosong) */
                 <tr>
                   <td colSpan="7" className="py-10 text-center text-gray-500">
-                    Belum ada data barang. Silakan tambah barang baru.
+                    {searchQuery
+                      ? "Barang tidak ditemukan."
+                      : "Belum ada data barang."}
                   </td>
                 </tr>
               ) : (
-                /* 6. MAPPING DATA ASLI */
                 products.map((item) => (
                   <tr
                     key={item.id}
@@ -236,8 +261,6 @@ const BarangPage = () => {
                     <td className="py-4 px-4 font-medium text-dark">
                       {item.name}
                     </td>
-
-                    {/* Kolom Gambar */}
                     <td className="py-4 px-4">
                       <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200 overflow-hidden">
                         {item.image_url ? (
@@ -251,19 +274,13 @@ const BarangPage = () => {
                         )}
                       </div>
                     </td>
-
                     <td className="py-4 px-4 text-gray-600">{item.category}</td>
-
-                    {/* Format Tanggal */}
                     <td className="py-4 px-4 text-gray-500 text-sm">
                       {formatDate(item.created_at)}
                     </td>
-
-                    {/* Format Stok */}
                     <td className="py-4 px-4 font-medium text-dark">
                       {item.stock} pcs
                     </td>
-
                     <td className="py-4 px-4">
                       <div className="flex justify-center gap-2">
                         <button
@@ -293,24 +310,45 @@ const BarangPage = () => {
           </table>
         </div>
 
-        {/* Pagination (Tetap Statis Dulu) */}
+        {/* --- PAGINATION CONTROLS --- */}
         <div className="mt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
-          {/* ... Bagian ini biarkan dulu, kita fokus data tampil dulu ... */}
           <div className="flex items-center gap-2">
             <span>Showing</span>
-            <select className="border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:border-primary">
-              <option>10</option>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:border-primary cursor-pointer"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
             </select>
           </div>
-          <span>Showing {products.length} records</span>
+          <span>
+            Showing {totalItems === 0 ? 0 : startEntry} to {endEntry} of{" "}
+            {totalItems} records
+          </span>
           <div className="flex gap-1">
-            <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1 || isLoading}
+              className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
+            >
               <ChevronLeft size={16} />
             </button>
-            <button className="px-3 py-1 bg-primary text-white rounded-lg">
-              1
-            </button>
-            <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <span className="px-3 py-1 bg-primary text-white rounded-lg text-xs flex items-center">
+              Page {currentPage}
+            </span>
+            <button
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              disabled={currentPage >= totalPages || isLoading}
+              className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition"
+            >
               <ChevronRight size={16} />
             </button>
           </div>

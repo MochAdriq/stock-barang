@@ -1,19 +1,28 @@
-import React from "react";
-import { LayoutGrid, ShoppingBag, ClipboardList, LogOut } from "lucide-react";
+import React, { useState } from "react";
+import {
+  LayoutGrid,
+  ShoppingBag,
+  ClipboardList,
+  LogOut,
+  Menu,
+  X,
+} from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom"; // Tambah ini
 
-// --- PERBAIKAN: Komponen dipindah ke LUAR MainLayout ---
-const MenuLink = ({ to, icon: Icon, label }) => {
+// Komponen Menu Item
+const MenuLink = ({ to, icon: Icon, label, onClick }) => {
   const location = useLocation();
-  // Cek apakah link ini sedang aktif
   const isActive = location.pathname === to;
 
   return (
     <Link
       to={to}
+      onClick={onClick} // Tutup sidebar saat menu diklik (untuk HP)
       className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
         isActive
-          ? "bg-blue-50 text-primary border-l-4 border-primary" // Style Aktif
+          ? "bg-blue-50 text-primary border-l-4 border-primary"
           : "text-gray-500 hover:bg-gray-50 hover:text-primary"
       }`}
     >
@@ -23,37 +32,98 @@ const MenuLink = ({ to, icon: Icon, label }) => {
   );
 };
 
-// --- Main Layout Utama ---
 const MainLayout = ({ children }) => {
+  // State untuk kontrol Sidebar di Mobile
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
+
   return (
-    <div className="min-h-screen w-full bg-primary p-4 md:p-6 flex gap-6">
-      {/* SIDEBAR (Floating Card) */}
-      <aside className="w-64 bg-white rounded-3xl shadow-lg flex flex-col p-6 h-[calc(100vh-3rem)] sticky top-6">
-        {/* Logo Text */}
-        <div className="mb-10 px-2">
-          <h1 className="text-lg font-bold text-dark">
-            PT Sentral Layanan Prima
-          </h1>
-        </div>
+    <div className="min-h-screen w-full bg-primary flex overflow-hidden">
+      {/* --- 1. MOBILE OVERLAY (Gelap-gelap di belakang sidebar) --- */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        ></div>
+      )}
 
-        {/* Menu Items */}
-        <nav className="flex-1 space-y-2">
-          <MenuLink to="/dashboard" icon={LayoutGrid} label="Beranda" />
-          <MenuLink to="/barang" icon={ShoppingBag} label="Barang" />
-          <MenuLink to="/riwayat" icon={ClipboardList} label="Riwayat" />
-        </nav>
+      {/* --- 2. SIDEBAR (Responsive) --- */}
+      <aside
+        className={`
+          fixed md:static inset-y-0 left-0 z-50 w-64 bg-white shadow-2xl md:shadow-none 
+          transform transition-transform duration-300 ease-in-out md:transform-none md:translate-x-0 md:m-6 md:rounded-3xl md:flex md:flex-col
+          ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+        `}
+      >
+        <div className="p-6 h-full flex flex-col">
+          {/* Header Sidebar + Tombol Close di HP */}
+          <div className="mb-10 px-2 flex justify-between items-center">
+            <h1 className="text-lg font-bold text-dark">Gudang App</h1>
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              className="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-full"
+            >
+              <X size={20} />
+            </button>
+          </div>
 
-        {/* Logout */}
-        <div className="mt-auto pt-6 border-t border-gray-100">
-          <button className="flex items-center gap-3 px-4 py-2 text-red-500 hover:bg-red-50 w-full rounded-xl transition-colors font-medium">
-            <LogOut size={20} />
-            <span>Keluar</span>
-          </button>
+          <nav className="flex-1 space-y-2">
+            <MenuLink
+              to="/dashboard"
+              icon={LayoutGrid}
+              label="Beranda"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+            <MenuLink
+              to="/barang"
+              icon={ShoppingBag}
+              label="Barang"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+            <MenuLink
+              to="/riwayat"
+              icon={ClipboardList}
+              label="Riwayat"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          </nav>
+
+          <div className="mt-auto pt-6 border-t border-gray-100">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 px-4 py-2 text-red-500 hover:bg-red-50 w-full rounded-xl transition-colors font-medium"
+            >
+              <LogOut size={20} />
+              <span>Keluar</span>
+            </button>
+          </div>
         </div>
       </aside>
 
-      {/* MAIN CONTENT AREA */}
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      {/* --- 3. KONTEN UTAMA --- */}
+      <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
+        {/* Tombol Hamburger (Hanya muncul di Mobile) */}
+        <div className="md:hidden p-4 bg-primary flex items-center gap-3 text-white sticky top-0 z-30">
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition"
+          >
+            <Menu size={24} />
+          </button>
+          <span className="font-bold text-lg">Menu Utama</span>
+        </div>
+
+        {/* Area Konten Scrollable */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 scroll-smooth">
+          {children}
+        </div>
+      </main>
     </div>
   );
 };

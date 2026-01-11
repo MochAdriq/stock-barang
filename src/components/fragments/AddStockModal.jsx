@@ -104,11 +104,13 @@ const AddStockModal = ({ isOpen, onClose, editData, onSuccess }) => {
         if (diff !== 0) {
           transactionPayload = {
             product_id: editData.id,
-            product_name_cached: formData.name, // Simpan nama buat backup
-            type: "ADJUSTMENT", // Tipe baru: Penyesuaian
-            quantity: Math.abs(diff), // Simpan angka positif
+            product_name_cached: formData.name,
+            category_cached: formData.category, // BARU: Simpan Kategori
+            image_url_cached: publicUrl, // BARU: Simpan Gambar
+            type: "ADJUSTMENT",
+            quantity: Math.abs(diff),
             date: new Date(),
-            status: diff > 0 ? "Penambahan Stok" : "Pengurangan Stok", // Keterangan tambahan
+            status: diff > 0 ? "Penambahan Stok" : "Pengurangan Stok",
           };
         }
       } else {
@@ -134,6 +136,8 @@ const AddStockModal = ({ isOpen, onClose, editData, onSuccess }) => {
         transactionPayload = {
           product_id: productId,
           product_name_cached: formData.name,
+          category_cached: formData.category, // BARU: Simpan Kategori
+          image_url_cached: publicUrl, // BARU: Simpan Gambar
           type: "IN",
           quantity: parseInt(formData.stock),
           date: new Date(),

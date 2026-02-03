@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 
 const BarangPage = () => {
-  // State UI
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -28,7 +27,6 @@ const BarangPage = () => {
   const [itemToDelete, setItemToDelete] = useState(null);
   const [itemToDetail, setItemToDetail] = useState(null);
 
-  // State Data & Pagination & Search
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -38,7 +36,6 @@ const BarangPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  // Debounce Search
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
@@ -47,7 +44,6 @@ const BarangPage = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // FUNGSI FETCH DATA
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
@@ -172,14 +168,12 @@ const BarangPage = () => {
       />
 
       <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm min-h-[500px]">
-        {/* Toolbar */}
         <div className="flex flex-col md:flex-row justify-between gap-4 mb-8">
           <div className="relative flex-1 max-w-lg">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
               size={20}
             />
-            {/* Input Search Aktif */}
             <input
               type="text"
               placeholder="Cari Barang..."
@@ -197,10 +191,6 @@ const BarangPage = () => {
               <Plus size={18} />
               <span>Tambah Barang</span>
             </Button>
-            {/* <button className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 font-medium transition">
-              <SlidersHorizontal size={18} />
-              <span>Filter</span>
-            </button> */}
           </div>
         </div>
 

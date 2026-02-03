@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Paperclip, Calendar, Loader2 } from "lucide-react";
-import { supabase } from "../../lib/supabaseClient"; // Import Supabase
+import { supabase } from "../../lib/supabaseClient";
 import Button from "../ui/Button";
 
 const AddStockModal = ({ isOpen, onClose, editData, onSuccess }) => {
@@ -8,7 +8,7 @@ const AddStockModal = ({ isOpen, onClose, editData, onSuccess }) => {
     category: "",
     name: "",
     stock: "",
-    date: new Date().toISOString().split("T")[0], // Default hari ini
+    date: new Date().toISOString().split("T")[0],
   });
 
   // State untuk file gambar
@@ -28,7 +28,7 @@ const AddStockModal = ({ isOpen, onClose, editData, onSuccess }) => {
             : "",
           date: editData.created_at ? editData.created_at.split("T")[0] : "",
         });
-        setImagePreview(editData.image_url); // Tampilkan gambar lama
+        setImagePreview(editData.image_url);
       } else {
         // Mode Tambah (Reset)
         setFormData({
@@ -48,7 +48,6 @@ const AddStockModal = ({ isOpen, onClose, editData, onSuccess }) => {
     const file = e.target.files[0];
     if (file) {
       setImageFile(file);
-      // Buat preview lokal biar user lihat apa yang dia pilih
       setImagePreview(URL.createObjectURL(file));
     }
   };
@@ -78,9 +77,8 @@ const AddStockModal = ({ isOpen, onClose, editData, onSuccess }) => {
       }
 
       let productId = editData?.id;
-      let transactionPayload = null; // Siapkan data transaksi
+      let transactionPayload = null;
 
-      // 2. Simpan Data Produk
       if (editData) {
         // --- LOGIKA EDIT (ADJUSTMENT) ---
         const oldStock = parseInt(editData.stock || 0);
@@ -100,13 +98,12 @@ const AddStockModal = ({ isOpen, onClose, editData, onSuccess }) => {
           .eq("id", editData.id);
         if (error) throw error;
 
-        // Jika stok berubah, catat transaksi!
         if (diff !== 0) {
           transactionPayload = {
             product_id: editData.id,
             product_name_cached: formData.name,
-            category_cached: formData.category, // BARU: Simpan Kategori
-            image_url_cached: publicUrl, // BARU: Simpan Gambar
+            category_cached: formData.category,
+            image_url_cached: publicUrl,
             type: "ADJUSTMENT",
             quantity: Math.abs(diff),
             date: new Date(),
@@ -114,7 +111,6 @@ const AddStockModal = ({ isOpen, onClose, editData, onSuccess }) => {
           };
         }
       } else {
-        // --- LOGIKA TAMBAH BARU (IN) ---
         const { data: newProduct, error } = await supabase
           .from("products")
           .insert([
@@ -136,8 +132,8 @@ const AddStockModal = ({ isOpen, onClose, editData, onSuccess }) => {
         transactionPayload = {
           product_id: productId,
           product_name_cached: formData.name,
-          category_cached: formData.category, // BARU: Simpan Kategori
-          image_url_cached: publicUrl, // BARU: Simpan Gambar
+          category_cached: formData.category,
+          image_url_cached: publicUrl,
           type: "IN",
           quantity: parseInt(formData.stock),
           date: new Date(),

@@ -8,7 +8,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Cek sesi saat aplikasi pertama dibuka
     const getSession = async () => {
       const {
         data: { session },
@@ -19,7 +18,6 @@ export const AuthProvider = ({ children }) => {
 
     getSession();
 
-    // 2. Pasang pendengar (listener) kalau ada login/logout
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -44,7 +42,6 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Hook biar gampang dipanggil di mana aja
 export const useAuth = () => {
   return useContext(AuthContext);
 };

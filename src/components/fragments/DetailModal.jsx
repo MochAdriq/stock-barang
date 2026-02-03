@@ -4,7 +4,6 @@ import { X, Package, Calendar, Tag, Layers, ExternalLink } from "lucide-react";
 const DetailModal = ({ isOpen, onClose, item }) => {
   if (!isOpen || !item) return null;
 
-  // Format Tanggal Cantik
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("id-ID", {
       day: "numeric",
@@ -37,7 +36,6 @@ const DetailModal = ({ isOpen, onClose, item }) => {
         {/* Content Body */}
         <div className="px-8 pb-8 -mt-12 relative">
           {/* Foto Barang (Floating) */}
-          {/* PENTING: Klik gambar untuk lihat ukuran asli */}
           <div className="w-24 h-24 mx-auto mb-4 relative group">
             <div
               className="w-full h-full bg-white rounded-2xl shadow-lg border-4 border-white overflow-hidden cursor-pointer hover:shadow-xl transition"

@@ -16,19 +16,16 @@ const InputForm = ({ label, type = "text", className, ...props }) => {
     <div
       className={`relative bg-white rounded-lg border border-gray-200 px-3 pt-5 pb-2 shadow-sm focus-within:border-primary focus-within:ring-1 focus-within:ring-primary ${className}`}
     >
-      {/* Label kecil di atas */}
       <label className="absolute top-2 left-3 text-xs font-medium text-primary">
         {label}
       </label>
 
-      {/* Input Field */}
       <input
         type={actualType}
         className="block w-full border-0 p-0 text-dark placeholder-gray-400 focus:ring-0 sm:text-sm sm:leading-6 outline-none bg-transparent font-medium"
-        {...props} // agar bisa menerima props lain seperti value, onChange, placeholder
+        {...props}
       />
 
-      {/* Ikon mata jika tipe password */}
       {isPasswordType && (
         <button
           type="button"

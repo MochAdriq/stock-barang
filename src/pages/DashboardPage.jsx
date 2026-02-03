@@ -82,7 +82,7 @@ const DashboardPage = () => {
           "Kategori",
           "Stok Saat Ini",
           "Tanggal Masuk",
-        ].join(",")
+        ].join(","),
       );
 
       // 3. Isi Baris Data
@@ -95,7 +95,7 @@ const DashboardPage = () => {
             `"${item.category}"`,
             item.stock,
             `"${date}"`,
-          ].join(",")
+          ].join(","),
         );
       });
 
@@ -106,7 +106,7 @@ const DashboardPage = () => {
       link.setAttribute("href", encodedUri);
       link.setAttribute(
         "download",
-        `Laporan_Stok_Gudang_${new Date().toISOString().split("T")[0]}.csv`
+        `Laporan_Stok_Gudang_${new Date().toISOString().split("T")[0]}.csv`,
       );
       document.body.appendChild(link);
       link.click();
@@ -183,7 +183,6 @@ const DashboardPage = () => {
 
       {/* --- KONTEN BAWAH --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Tabel Barang Terbaru */}
         <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-gray-800">

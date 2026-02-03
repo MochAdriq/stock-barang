@@ -33,7 +33,6 @@ const MenuLink = ({ to, icon: Icon, label, onClick }) => {
 };
 
 const MainLayout = ({ children }) => {
-  // State untuk kontrol Sidebar di Mobile
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -45,7 +44,6 @@ const MainLayout = ({ children }) => {
 
   return (
     <div className="min-h-screen w-full bg-primary flex overflow-hidden">
-      {/* --- 1. MOBILE OVERLAY (Gelap-gelap di belakang sidebar) --- */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
@@ -53,7 +51,6 @@ const MainLayout = ({ children }) => {
         ></div>
       )}
 
-      {/* --- 2. SIDEBAR (Responsive) --- */}
       <aside
         className={`
           fixed md:static inset-y-0 left-0 z-50 w-64 bg-white shadow-2xl md:shadow-none 
@@ -62,7 +59,6 @@ const MainLayout = ({ children }) => {
         `}
       >
         <div className="p-6 h-full flex flex-col">
-          {/* Header Sidebar + Tombol Close di HP */}
           <div className="mb-10 px-2 flex justify-between items-center">
             <h1 className="text-lg font-bold text-dark">Gudang App</h1>
             <button
@@ -106,9 +102,7 @@ const MainLayout = ({ children }) => {
         </div>
       </aside>
 
-      {/* --- 3. KONTEN UTAMA --- */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        {/* Tombol Hamburger (Hanya muncul di Mobile) */}
         <div className="md:hidden p-4 bg-primary flex items-center gap-3 text-white sticky top-0 z-30">
           <button
             onClick={() => setIsSidebarOpen(true)}
@@ -119,7 +113,6 @@ const MainLayout = ({ children }) => {
           <span className="font-bold text-lg">Menu Utama</span>
         </div>
 
-        {/* Area Konten Scrollable */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 scroll-smooth">
           {children}
         </div>
